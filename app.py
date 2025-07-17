@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import datetime
 import plotly.graph_objects as go
+import base64
+from io import BytesIO
 
 # Page Config
 st.set_page_config(page_title="🩺 Diabetes Predictor", layout="centered")
@@ -66,7 +68,16 @@ if st.button("🚀 Predict Now"):
     })
     st.dataframe(report, use_container_width=True)
 
-    # Summary in markdown
+    # Risk Level
+    if proba[1] > 0.8:
+        risk_level = "🔴 High Risk"
+    elif proba[1] > 0.5:
+        risk_level = "🟠 Medium Risk"
+    else:
+        risk_level = "🟢 Low Risk"
+    st.markdown(f"### 🔍 Risk Level: {risk_level}")
+
+    # Summary
     st.markdown("### 📄 Report Summary")
     st.markdown(f"""
     - 👤 **Name**: {name}  
@@ -77,11 +88,11 @@ if st.button("🚀 Predict Now"):
     - 📏 **Height**: {height} cm  
     - ⚖️ **Weight**: {weight} kg  
     - 📌 **BMI**: {bmi}  
-    - 🤖 **Prediction**: {"🛑 Positive (May have diabetes)" if prediction[0]==1 else "✅ Negative (No diabetes)"}  
+    - 🤖 **Prediction**: {result}  
     - 📈 **Confidence**: {confidence}%
     """)
 
-    # Prediction Result and Suggestions
+    # Health Suggestions
     if prediction[0] == 1:
         st.error("⚠️ The model predicts: You may have diabetes. 🩺💉")
         st.markdown("""
@@ -113,7 +124,7 @@ if st.button("🚀 Predict Now"):
     ax.set_title("Health Metrics")
     st.pyplot(fig)
 
-    # Radar Chart with Plotly
+    # Radar Chart
     st.markdown("### 🧭 Radar Chart Overview")
     radar_fig = go.Figure()
     radar_fig.add_trace(go.Scatterpolar(
@@ -126,14 +137,21 @@ if st.button("🚀 Predict Now"):
     radar_fig.update_layout(polar=dict(radialaxis=dict(visible=True)), showlegend=False)
     st.plotly_chart(radar_fig)
 
-    # Download report
+    # Download CSV Report
     csv = report.to_csv(index=False).encode("utf-8")
     st.download_button(
-        "⬇️ Download Report",
+        "⬇️ Download CSV Report",
         data=csv,
         file_name="diabetes_prediction_report.csv",
         mime="text/csv"
     )
+
+    # PDF Export
+    def create_download_link(df):
+        csv = df.to_csv(index=False)
+        b64 = base64.b64encode(csv.encode()).decode()
+        return f'<a href="data:file/csv;base64,{b64}" download="report.csv">📥 Download as CSV</a>'
+    st.markdown(create_download_link(report), unsafe_allow_html=True)
 
     # Reset Button
     if st.button("🔁 Reset Form"):
@@ -143,4 +161,6 @@ if st.button("🚀 Predict Now"):
 st.markdown("""
 ---
 Thanks for using. Hope you have a good day！❤️
+
+[🩺 Read about Diabetes from WHO](https://www.who.int/news-room/fact-sheets/detail/diabetes)
 """)
