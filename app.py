@@ -101,6 +101,5 @@ if st.button("🚀 Predict Now"):
 # Footer
 st.markdown("""
 ---
-Made with ❤️ using Streamlit  
-AI Model powered by scikit-learn
+Thanks for using. Hope you have a good day！💓
 """)
