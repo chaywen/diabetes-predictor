@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import datetime
+import plotly.graph_objects as go
 
 # Page Config
 st.set_page_config(page_title="🩺 Diabetes Predictor", layout="centered")
@@ -47,6 +48,8 @@ st.info(f"📌 Calculated BMI: {bmi}")
 if st.button("🚀 Predict Now"):
     input_data = np.array([[glucose, bp, bmi, age]])
     prediction = model.predict(input_data)
+    proba = model.predict_proba(input_data)[0]
+    confidence = round(max(proba) * 100, 2)
 
     st.subheader("📋 Prediction Summary")
     result = "Positive" if prediction[0] == 1 else "Negative"
@@ -58,20 +61,41 @@ if st.button("🚀 Predict Now"):
         "Blood Pressure": [bp],
         "BMI": [bmi],
         "Age": [age],
-        "Prediction": [result]
+        "Prediction": [result],
+        "Confidence": [f"{confidence}%"]
     })
     st.dataframe(report, use_container_width=True)
 
+    # Summary in markdown
+    st.markdown("### 📄 Report Summary")
+    st.markdown(f"""
+    - 👤 **Name**: {name}  
+    - ⚧️ **Gender**: {gender}  
+    - 📅 **Date**: {date.strftime('%Y-%m-%d')}  
+    - 🍬 **Glucose**: {glucose}  
+    - 💓 **Blood Pressure**: {bp}  
+    - 📏 **Height**: {height} cm  
+    - ⚖️ **Weight**: {weight} kg  
+    - 📌 **BMI**: {bmi}  
+    - 🤖 **Prediction**: {"🛑 Positive (May have diabetes)" if prediction[0]==1 else "✅ Negative (No diabetes)"}  
+    - 📈 **Confidence**: {confidence}%
+    """)
+
+    # Prediction Result and Suggestions
     if prediction[0] == 1:
-        st.error("⚠️ The model predicts: You may have diabetes.")
+        st.error("⚠️ The model predicts: You may have diabetes. 🩺💉")
         st.markdown("""
         ### 🩺 Health Suggestions
         - Consult a healthcare professional.
         - Maintain a healthy diet & active lifestyle.
         - Monitor blood glucose & blood pressure regularly.
         """)
+        if gender == "Female":
+            st.info("👩 Hormone levels and glucose sensitivity may affect your health.")
+        elif gender == "Male":
+            st.info("👨 Watch visceral fat and sugar intake.")
     else:
-        st.success("✅ The model predicts: You are unlikely to have diabetes.")
+        st.success("✅ The model predicts: You are unlikely to have diabetes. 🥦🏃‍♂️")
         st.markdown("""
         ### ✅ Keep It Up!
         - Stay active and eat balanced meals.
@@ -89,6 +113,19 @@ if st.button("🚀 Predict Now"):
     ax.set_title("Health Metrics")
     st.pyplot(fig)
 
+    # Radar Chart with Plotly
+    st.markdown("### 🧭 Radar Chart Overview")
+    radar_fig = go.Figure()
+    radar_fig.add_trace(go.Scatterpolar(
+        r=[glucose, bp, bmi, age],
+        theta=["Glucose", "Blood Pressure", "BMI", "Age"],
+        fill='toself',
+        name='Your Data',
+        marker_color='blue'
+    ))
+    radar_fig.update_layout(polar=dict(radialaxis=dict(visible=True)), showlegend=False)
+    st.plotly_chart(radar_fig)
+
     # Download report
     csv = report.to_csv(index=False).encode("utf-8")
     st.download_button(
@@ -98,8 +135,12 @@ if st.button("🚀 Predict Now"):
         mime="text/csv"
     )
 
+    # Reset Button
+    if st.button("🔁 Reset Form"):
+        st.experimental_rerun()
+
 # Footer
 st.markdown("""
 ---
-Thanks for using. Hope you have a good day！💓
+Thanks for using. Hope you have a good day！❤️
 """)
