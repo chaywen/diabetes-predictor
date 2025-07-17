@@ -1,54 +1,68 @@
 import streamlit as st
 import pickle
 import numpy as np
+import matplotlib.pyplot as plt
+
+# Page setup
+st.set_page_config(page_title="Diabetes Prediction App", page_icon="🩺", layout="wide")
 
 # Title
-st.set_page_config(page_title="Diabetes Prediction App", page_icon="🩺")
-st.title('🩺 Diabetes Prediction App')
-
-# Description
-st.write("""
-This app uses an AI model to predict whether you are likely to have **diabetes**  
-based on your **Glucose**, **Blood Pressure**, **BMI** (auto-calculated), and **Age**.
-""")
+st.title("🩺 Diabetes Prediction App")
+st.markdown("Predict your risk of diabetes based on health indicators.")
 
 # Load model
 try:
     with open('diabetes_model.pkl', 'rb') as file:
         model = pickle.load(file)
 except FileNotFoundError:
-    st.error("❌ diabetes_model.pkl not found. Please place the file in the same folder as this app.")
+    st.error("❌ Model file not found. Please upload 'diabetes_model.pkl'.")
     st.stop()
 
-# User Inputs
-st.subheader("🧍 Personal Information")
-name = st.text_input("Name", placeholder="e.g. John Doe")
-gender = st.selectbox("Gender", ["Male", "Female"])
+# Layout: Left - Input | Right - Output
+col1, col2 = st.columns([1, 1])
 
-st.subheader("🩸 Health Information")
-glucose = st.number_input('Glucose Level', min_value=0, max_value=200, value=120)
-bp = st.number_input('Blood Pressure', min_value=0, max_value=150, value=70)
-height = st.number_input('Height (cm)', min_value=100, max_value=250, value=160)
-weight = st.number_input('Weight (kg)', min_value=30, max_value=200, value=60)
+with col1:
+    st.header("🔎 Enter Your Info")
+    name = st.text_input("👤 Name", placeholder="e.g. Alice")
+    gender = st.radio("⚧️ Gender", ["Male", "Female"], horizontal=True)
+    age = st.slider("🎂 Age", 1, 120, 30)
+    glucose = st.slider("🍬 Glucose Level", 0, 200, 120)
+    bp = st.slider("💓 Blood Pressure", 0, 150, 70)
+    height = st.number_input("📏 Height (cm)", min_value=100, max_value=250, value=160)
+    weight = st.number_input("⚖️ Weight (kg)", min_value=30, max_value=200, value=60)
 
-# Auto-calculate BMI
-bmi = weight / ((height / 100) ** 2)
-st.write(f"📏 **Calculated BMI:** {bmi:.2f}")
+    bmi = weight / ((height / 100) ** 2)
+    st.write(f"📊 **Calculated BMI:** `{bmi:.2f}`")
 
-age = st.number_input('Age', min_value=1, max_value=120, value=30)
+    if st.button("📈 Predict Diabetes Risk"):
+        if not name:
+            st.warning("🚨 Please enter your name to continue.")
+        else:
+            input_data = np.array([[glucose, bp, bmi, age]])
+            prediction = model.predict(input_data)
+            result_text = "⚠️ Likely to Have Diabetes" if prediction[0] == 1 else "✅ Unlikely to Have Diabetes"
 
-# Predict button
-if st.button('🔍 Predict'):
-    input_data = np.array([[glucose, bp, bmi, age]])
-    prediction = model.predict(input_data)
+            with col2:
+                st.header("📋 Prediction Report")
+                st.success(f"👤 Name: **{name}**")
+                st.write(f"🔹 Gender: `{gender}`")
+                st.write(f"🔹 Age: `{age}`")
+                st.write(f"🔹 Glucose: `{glucose}`")
+                st.write(f"🔹 Blood Pressure: `{bp}`")
+                st.write(f"🔹 BMI: `{bmi:.2f}`")
 
-    st.subheader("🧾 Prediction Report")
-    st.write(f"👤 Name: **{name or 'N/A'}**")
-    st.write(f"⚧ Gender: **{gender}**")
-    st.write(f"📊 Glucose: **{glucose}**, Blood Pressure: **{bp}**, BMI: **{bmi:.2f}**, Age: **{age}**")
+                # Result box
+                if prediction[0] == 1:
+                    st.error(result_text)
+                else:
+                    st.success(result_text)
 
-    if prediction[0] == 1:
-        st.error("⚠️ The model predicts: You may have diabetes.")
-    else:
-        st.success("✅ The model predicts: You are unlikely to have diabetes.")
-
+                # Graph: Pie chart
+                labels = ['No Diabetes', 'Diabetes']
+                sizes = [1, 0] if prediction[0] == 0 else [0, 1]
+                colors = ['#4CAF50', '#FF5252']
+                fig, ax = plt.subplots()
+                ax.pie([0.01, 0.99] if prediction[0] else [0.99, 0.01], labels=labels, colors=colors,
+                       autopct='%1.1f%%', startangle=90)
+                ax.axis('equal')
+                st.pyplot(fig)
